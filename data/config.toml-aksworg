@@ -1,7 +1,7 @@
 port = 8401
 large = false
 prefix = ""
-kb_file = "data/aksw.org.hdt"
+kb_file = "https://raw.githubusercontent.com/AKSW/aksw.org-model/main/aksw.org.nt"
 namespace = "http://aksw.org/"
 title_properties = ["http://purl.org/dc/elements/1.1/title", "http://purl.org/dc/terms/title", "http://www.w3.org/2004/02/skos/core#prefLabel", "http://www.w3.org/2000/01/rdf-schema#label", "http://xmlns.com/foaf/0.1/name"]
 description_properties = ["http://www.w3.org/2004/02/skos/core#definition", "http://www.w3.org/2000/01/rdf-schema#comment", "http://purl.org/dc/terms/abstract"]
