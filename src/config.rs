@@ -20,6 +20,7 @@ pub struct Config {
     pub title_properties: Vec<String>,
     pub type_properties: Vec<String>,
     pub description_properties: HashSet<String>,
+    pub show_properties: HashSet<String>,
     pub langs: Vec<String>,
     pub homepage: Option<String>,
     pub endpoint: Option<String>,

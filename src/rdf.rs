@@ -1,6 +1,8 @@
 //! Load the RDF graph and summarize RDF resources.
 #![allow(rustdoc::bare_urls)]
 use crate::{config::config, resource::Resource};
+use chrono::{Local, DateTime, NaiveDate};
+use comrak::{markdown_to_html, ComrakOptions};
 #[cfg(feature = "hdt")]
 use hdt::HdtGraph;
 use log::*;
@@ -8,7 +10,7 @@ use multimap::MultiMap;
 #[cfg(feature = "rdfxml")]
 use sophia::serializer::xml::RdfXmlSerializer;
 use sophia::{
-    graph::{inmem::sync::FastGraph, *},
+    graph::{inmem::{sync::FastGraph, LightGraph}, *},
     iri::{error::InvalidIri, AsIri, Iri, IriBox},
     ns::Namespace,
     parser::{nt, turtle},
@@ -17,17 +19,19 @@ use sophia::{
         nt::NtSerializer,
         turtle::{TurtleConfig, TurtleSerializer},
         Stringifier, TripleSerializer,
+	QuadSerializer,
     },
     term,
-    term::{RefTerm, TTerm, Term, Term::*, SimpleIri},
-    triple::{stream::TripleSource, Triple},
+    term::{RefTerm, SimpleIri, TTerm, Term, Term::*},
+    triple::{stream::TripleSource, Triple}, quad::stream::AsQuadSource,
 };
+use sophia_jsonld::JsonLdSerializer;
+use base64::Engine;
 use std::{
-    collections::BTreeMap, collections::BTreeSet, collections::HashMap, fmt, fs::File, io::BufReader, path::Path, sync::Arc, sync::OnceLock, time::Instant,
+    collections::BTreeMap, collections::BTreeSet, collections::HashMap, fmt, fs::File, io::BufReader, path::Path, sync::Arc, sync::OnceLock, time::Instant
 };
 #[cfg(feature = "hdt")]
 use zstd::stream::read::Decoder;
-use comrak::{markdown_to_html, ComrakOptions};
 
 static EXAMPLE_KB: &str = std::include_str!("../data/example.ttl");
 static CAP: usize = 1000; // maximum number of values shown per property
@@ -58,9 +62,7 @@ impl fmt::Display for Piri {
 
 impl Piri {
     pub fn new(iri: IriBox) -> Self { Self { prefixed: get_prefixed_pair(&iri.as_iri()), iri } }
-    fn embrace(&self) -> String {
-        format!("&lt;{self}&gt;")
-    }
+    fn embrace(&self) -> String { format!("&lt;{self}&gt;") }
     pub fn prefixed_string(&self, bold: bool, embrace: bool) -> String {
         if let Some((p, s)) = &self.prefixed {
             if bold {
@@ -78,23 +80,21 @@ impl Piri {
 
     fn root_relative(&self) -> String {
         if self.iri.value().starts_with(&config().namespace) {
-            if &self.iri.value().to_string() != &config().namespace && ! self.iri.value().contains("#") {
+            if &self.iri.value().to_string() != &config().namespace && !self.iri.value().contains("#") {
                 self.iri.value().replace(&config().namespace, &(config().base.clone() + "/"))
             } else {
-                config().base.clone() + "/?" + &self.iri.value().replace("#","%23")
+                config().base.clone() + "/?" + &self.iri.value().replace("#", "%23")
             }
         } else {
             self.iri.value().clone().to_string()
         }
     }
-    fn property_anchor(&self) -> String {
-        format!("<a href='{}'>{}</a>", self.root_relative(), self.prefixed_string(true, false))
-    }
+    //fn property_anchor(&self) -> String { format!("<a href='{}'>{}</a>", self.root_relative(), self.prefixed_string(true, false)) }
     fn root_local(&self) -> String {
-        if self.iri.value().starts_with(&config().namespace) && &self.iri.value().to_string() != &config().namespace && ! self.iri.value().contains("#") {
+        if self.iri.value().starts_with(&config().namespace) && &self.iri.value().to_string() != &config().namespace && !self.iri.value().contains("#") {
             self.iri.value().replace(&config().namespace, "/")
         } else {
-            String::from("/?") + &self.iri.value().replace("#","%23")
+            String::from("/?") + &self.iri.value().replace("#", "%23")
         }
     }
 }
@@ -279,24 +279,120 @@ fn local_infos_link<G: Graph>(g: &G, res: &str, iri: &str) -> (bool, String) {
     let piri = Piri::from(iri);
     let siri = SimpleIri::new_unchecked(iri, None);
     let local = iri.starts_with(&config().namespace);
-    let local_infos = if ! local {
-        let any_s = { let vres = res.clone(); g.triples_with_s(&siri).any(|t| t.unwrap().o().value().to_string() != vres) };
-        let any_o = { let vres = res.clone(); g.triples_with_o(&siri).any(|t| t.unwrap().s().value().to_string() != vres) };
+    let local_infos = if !local {
+        let any_s = {
+            let vres = res.clone();
+            g.triples_with_s(&siri).any(|t| t.unwrap().o().value().to_string() != vres)
+        };
+        let any_o = {
+            let vres = res.clone();
+            g.triples_with_o(&siri).any(|t| t.unwrap().s().value().to_string() != vres)
+        };
         if any_s || any_o {
-            format!(" <a class='localinfo' href='{}'>&#{};</a>", piri.root_local(), if any_s && any_o { 10542 } else if any_s { 10543 } else { 10544 })
-        } else { String::from("") }
-    } else { String::from("") };
+            format!(
+                " <a class='localinfo' href='{}'>&#{};</a>",
+                piri.root_local(),
+                if any_s && any_o {
+                    10542
+                } else if any_s {
+                    10543
+                } else {
+                    10544
+                }
+            )
+        } else {
+            String::from("")
+        }
+    } else {
+        String::from("")
+    };
     (local, local_infos)
 }
 
 fn connections_generic<G: Graph>(g: &G, conn_type: &ConnectionType, source: &SimpleIri) -> Result<Vec<Connection>, InvalidIri> {
-    let triples = match conn_type {
+    let mut triples = LightGraph::new();
+    let triples1 = match conn_type {
         ConnectionType::Direct => g.triples_with_s(source),
         ConnectionType::Inverse => g.triples_with_o(source),
     };
+    let _ = triples.insert_all(triples1);
+    let xns = Namespace::new("event:").unwrap();
+    let aksw = SimpleIri::new("http://aksw.org/Groups/AKSW", None).unwrap();
+    let p_member = SimpleIri::new("http://xmlns.com/foaf/0.1/member", None).unwrap();
+    let p_part_of = SimpleIri::new("http://purl.org/vocab/aiiso/schema#part_of", None).unwrap();
+    let p_partner = SimpleIri::new("http://aksw.org/schema/partner", None).unwrap();
+    let t_event = SimpleIri::new("http://schema.org/", Some("Event")).unwrap();
+    let p_type = SimpleIri::new("http://www.w3.org/1999/02/22-rdf-syntax-ns#", Some("type")).unwrap();
+    let p_start_date = SimpleIri::new("http://schema.org/", Some("startDate")).unwrap();
+    let p_super_event = SimpleIri::new("http://schema.org/", Some("superEvent")).unwrap();
+    let p_subclass_of = SimpleIri::new("http://www.w3.org/2000/01/rdf-schema#", Some("subClassOf")).unwrap();
+    if matches!(conn_type, ConnectionType::Direct) {
+	if source.value() == "http://aksw.org/Team" {
+	    let _ = triples.insert_all(g.triples_with_sp(&aksw, &p_member));
+	    for res in g.triples_with_po(&p_part_of, &aksw) {
+		let t1 = res.unwrap();
+		let s = t1.s();
+		let _ = triples.insert_all(g.triples_with_sp(s, &p_member));
+	    }
+	} else if source.value() == "http://aksw.org/Partners" {
+	    let _ = triples.insert_all(g.triples_with_p(&p_partner));
+	} else if source.value() == "http://aksw.org/Events" {
+	    let now = Local::now();
+	    let mut events_triples = LightGraph::new();
+	    let _ = events_triples.insert_all(g.triples_with_po(&p_type, &t_event));
+	    'outer: for res1 in g.triples_with_po(&p_subclass_of, &t_event) {
+		let t1 = res1.unwrap();
+		for res2 in g.triples_with_po(&p_type, t1.s()) {
+		    let t2 = res2.unwrap();
+		    for _ in g.triples_with_sp(t2.s(), &p_super_event) {
+			continue 'outer;
+		    }
+		    let _ = events_triples.insert(t2.s(), t2.p(), t2.o());
+		}
+	    }
+	    
+	    for res in events_triples.triples() {
+		let t1 = res.unwrap();
+		let s = t1.s();
+		
+		let past = (|| {
+		    for res2 in g.triples_with_sp(s, &p_start_date) {
+			let t2 = res2.unwrap();
+			let o = t2.o();
+			let dtval = if let Some(datatype) = o.datatype() {
+			    if datatype.value() == "http://www.w3.org/2001/XMLSchema#dateTime" {
+				let maybedt = DateTime::parse_from_rfc3339(&o.value()).ok();
+				if let Some(dt) = maybedt {
+				    Some(dt.date_naive())
+				} else {
+				    None
+				}
+			    } else if datatype.value() == "http://www.w3.org/2001/XMLSchema#date" {
+				NaiveDate::parse_from_str(&o.value(), "%Y-%m-%d").ok()
+			    } else {
+				None
+			    }
+			} else { None };
+			if let Some(date) = dtval {
+			    if now.date_naive().le(&date) {
+				return false;
+			    }
+			}
+		    }
+		    return true;
+		})();
+
+		if past {
+		    let _ = triples.insert(source, &xns.get("past_event").unwrap(), s);
+		} else {
+		    let _ = triples.insert(source, &xns.get("Upcoming_event").unwrap(), s);
+		}
+	    }
+	}
+    }
     let mut map: BTreeMap<IriBox, BTreeSet<String>> = BTreeMap::new();
     let mut connections: Vec<Connection> = Vec::new();
-    for res in triples {
+    for res in triples.triples() {
         let triple = res.unwrap();
         let target_term = match conn_type {
             ConnectionType::Direct => triple.o(),
@@ -305,34 +401,49 @@ fn connections_generic<G: Graph>(g: &G, conn_type: &ConnectionType, source: &Sim
         let target_html = match Term::<_>::from(target_term) {
             Literal(lit) => match lit.lang() {
                 Some(lang) => {
-                    format!("{} @{lang}", lit.txt())
+                    Some(format!("{} @{lang}", lit.txt()))
                 }
                 None => {
-                    format!(r#"{}<div class="datatype">{}</div>"#,
+		    if lit.txt().contains("{{") && lit.dt().value().to_string() == "http://ns.ontowiki.net/SysOnt/Markdown" {
+			None
+		    } else {
+			Some(format!(
+                            r#"{}<div class="datatype">{}</div>"#,
                             if lit.dt().value().to_string() == "http://ns.ontowiki.net/SysOnt/Markdown" {
-                                markdown_to_html(lit.txt(), &ComrakOptions::default())
-                            } else { lit.txt().to_string() }, Piri::from(&lit.dt()).short())
+				markdown_to_html(lit.txt(), &ComrakOptions::default())
+                            } else {
+				lit.txt().to_string()
+                            },
+                            Piri::from(&lit.dt()).short()
+			))
+		    }
                 }
             },
             Iri(tiri) => {
                 let piri = Piri::from(&tiri);
-                let (local, local_infos) = local_infos_link(g, &source.value(), &piri.to_string());
-                let title = if let Some(title) = titles().get(&piri.to_string()) { format!("<br><span>&#8618; {title}</span>") } else { String::new() };
-                let target = if local { "" } else { " target='_blank' " };
-                let res = format!("<a href='{}'{target}>{}{title}</a>{local_infos}", piri.root_relative(), piri.prefixed_string(false, true));
+                let (local, _local_infos) = local_infos_link(g, &source.value(), &piri.to_string());
+		let special = if let Iri(propiri) = Term::<_>::from(triple.p()) {
+		    propiri.value() == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" ||
+			propiri.value() == "http://www.w3.org/2000/01/rdf-schema#subClassOf"
+		} else { false };
+                let title = if let Some(title) = titles().get(&piri.to_string()) { format!("<span>{title}</span>") } else { piri.prefixed_string(false, true) };
+                let target = if local || special { "" } else { " target='_blank' " };
+                let res = format!("<a href='{}'{target}>{title}</a>", if special { piri.root_local() } else { piri.root_relative() });
                 if piri.to_string().starts_with("mailto:") {
-                    format!("<script>document.write(atob('{}'))</script>", base64::encode(res))
-                } else { res }
+                    Some(format!("<script>document.write(atob('{}'))</script>", base64::engine::general_purpose::STANDARD_NO_PAD.encode(res)))
+                } else {
+                    Some(res)
+                }
             }
-            _ => target_term.value().to_string(), // BNode, Variable
+            _ => Some(target_term.value().to_string()), // BNode, Variable
         };
-        if let Iri(iri) = Term::<_>::from(triple.p()) {
+        if let Some(thtml) = target_html && let Iri(iri) = Term::<_>::from(triple.p()) {
             let key = IriBox::new(iri.value().into())?;
             if let Some(values) = map.get_mut(&key) {
-                values.insert(target_html);
+                values.insert(thtml);
             } else {
                 let mut values = BTreeSet::new();
-                values.insert(target_html);
+                values.insert(thtml);
                 map.insert(key, values);
             }
         }
@@ -343,8 +454,12 @@ fn connections_generic<G: Graph>(g: &G, conn_type: &ConnectionType, source: &Sim
         if len > CAP {
             target_htmls.push("...".to_string());
         }
-        let (_, local_infos) = local_infos_link(g, &source.to_string(), &prop);
-        connections.push(Connection { prop: prop.clone(), prop_html: format!("{}{}", Piri::new(prop).property_anchor(), local_infos), target_htmls });
+        let (_, _local_infos) = local_infos_link(g, &source.to_string(), &prop);
+        connections.push(Connection {
+	    prop: prop.clone(),
+	    prop_html: if let Some(title) = titles().get(&prop.to_string()) { format!("<span><b>{title}</b></span>") } else { Piri::new(prop).prefixed_string(true, false) },
+	    target_htmls
+	});
     }
     Ok(connections)
 }
@@ -374,6 +489,17 @@ pub fn serialize_turtle(iri: &SimpleIri) -> String {
 fn serialize_turtle_generic<G: Graph>(g: &G, iri: &SimpleIri) -> String {
     let config = TurtleConfig::new().with_pretty(true).with_own_prefix_map(prefixes().clone());
     TurtleSerializer::new_stringifier_with_config(config).serialize_triples(g.triples_with_s(iri)).unwrap().to_string()
+}
+
+pub fn serialize_jsonld(iri: &SimpleIri) -> String {
+    match graph() {
+        GraphEnum::FastGraph(g) => serialize_jsonld_generic(g, iri),
+        #[cfg(feature = "hdt")]
+        GraphEnum::HdtGraph(g) => serialize_jsonld_generic(g, iri),
+    }
+}
+fn serialize_jsonld_generic<G: Graph>(g: &G, iri: &SimpleIri) -> String {
+    JsonLdSerializer::new_stringifier().serialize_quads(g.triples_with_s(iri).map(|t| t.unwrap().wrap_as_quad()).into_iter().into_quad_source()).unwrap().to_string()
 }
 
 /// Export all triples (s,p,o) for a given subject s as N-Triples.
@@ -420,9 +546,36 @@ pub fn find_bibtag_iri(iri: &SimpleIri) -> Option<String> {
 }
 fn find_bibtag_generic<G: Graph>(g: &G, iri: &SimpleIri) -> Option<String> {
     let pt = SimpleIri::new("http://aksw.org/schema/", Some("publicationTag")).ok()?;
+    if iri.value() == "http://aksw.org/Publications" {
+	return Some(String::from("aksw"));
+    }
     for t in g.triples_with_sp(iri, &pt) {
         let t = t.ok()?;
-        return Some(t.o().value().to_string());
+	let tstring = t.o().value().to_string();
+	if ! tstring.is_empty() {
+            return Some(format!("aksw/{tstring}"));
+	}
+    }
+    None
+}
+
+pub fn find_redirect(iri: &SimpleIri) -> Option<String> {
+    match graph() {
+        GraphEnum::FastGraph(g) => find_redirect_generic(g, iri),
+        #[cfg(feature = "hdt")]
+        GraphEnum::HdtGraph(g) => find_redirect_generic(g, iri),
+    }
+}
+fn find_redirect_generic<G: Graph>(g: &G, iri: &SimpleIri) -> Option<String> {
+    let psee_also = SimpleIri::new("http://ns.ontowiki.net/SysOnt/Site/", Some("seeAlso")).ok()?;
+    let tmoved_resource = SimpleIri::new("http://ns.ontowiki.net/SysOnt/Site/", Some("MovedResource")).ok()?;
+    let prdf_type = SimpleIri::new("http://www.w3.org/1999/02/22-rdf-syntax-ns#", Some("type")).ok()?;
+    for _ in g.triples_with_spo(iri, &prdf_type, &tmoved_resource) {
+	for tt in g.triples_with_sp(iri, &psee_also) {
+            let triple = tt.ok()?;
+	    let tstring = triple.o().value().to_string();
+	    return Some(tstring);
+	}
     }
     None
 }
@@ -438,24 +591,31 @@ pub fn resource(iri: &SimpleIri) -> Result<Resource, InvalidIri> {
 
     let all_directs = connections(&ConnectionType::Direct, iri)?;
     let mut descriptions = filter(&all_directs, |key| config().description_properties.contains(key));
-    let notdescriptions = filter(&all_directs, |key| !config().description_properties.contains(key));
+    let notdescriptions = filter(&all_directs, |key| config().show_properties.contains(key));
+    //let notdescriptions = filter(&all_directs, |key| !config().description_properties.contains(key));
     let depiction = find_depiction_iri(iri);
     let local = subject.value().starts_with(&config().namespace);
     let local_suffix = if local { subject.value().replace(&config().namespace, "") } else { subject.value().to_string() };
     let title = titles().get(&uri).unwrap_or(&local_suffix.to_owned()).to_string();
     let main_type = types().get(&local_suffix).map(std::clone::Clone::clone);
-    let inverses = if config().show_inverse { filter(&connections(&ConnectionType::Inverse, iri)?, |_| true) } else { Vec::new() };
+    let all_inverses = if config().show_inverse { connections(&ConnectionType::Inverse, iri)? } else { Vec::new() };
+    let inverses = filter(&all_inverses, |key| config().show_properties.contains(key));
+    let instances = filter(&all_inverses, |key| key == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
+    let superclasses = filter(&all_directs, |key| key == "http://www.w3.org/2000/01/rdf-schema#subClassOf");
+    let subclasses = filter(&all_inverses, |key| key == "http://www.w3.org/2000/01/rdf-schema#subClassOf");
     let bibtag = find_bibtag_iri(iri);
-    if all_directs.is_empty() && inverses.is_empty() {
+    let redirect = find_redirect(iri);
+    if all_directs.is_empty() && inverses.is_empty() && instances.is_empty() {
         let warning = format!("No triples found for {uri}. Did you configure the namespace correctly?");
         warn!("{warning}");
         descriptions.push(("Warning".to_owned(), vec![warning]));
-        return Err(InvalidIri(subject.to_string()))
+        return Err(InvalidIri(subject.to_string()));
     }
     Ok(Resource {
+	jsonld: Some(serialize_jsonld(subject)),
         suffix: local_suffix.to_owned(),
-        title_maybe_link: if ! local { format!("<a href='{}' target='_blank'>{}</a>", uri, title) } else { title.clone() },
-        edit_url: Some(format!("https://aksw.eccenca.dev/explore?graph=http://aksw.org/&resource={}&inlineView=true", uri.replace("#","%23"))),
+        title_maybe_link: if !local { format!("<a href='{}' target='_blank'>{}</a>", uri, title) } else { title.clone() },
+        edit_url: Some(format!("https://aksw.eccenca.dev/explore?graph=http://aksw.org/&resource={}&inlineView=true", uri.replace("#", "%23"))),
         uri,
         duration: format!("{:?}", start.elapsed()),
         title,
@@ -464,7 +624,11 @@ pub fn resource(iri: &SimpleIri) -> Result<Resource, InvalidIri> {
         descriptions,
         directs: notdescriptions,
         inverses,
+	superclasses,
+	subclasses,
+	instances,
         depiction,
         bibtag,
+	redirect,
     })
 }

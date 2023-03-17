@@ -11,12 +11,13 @@ html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, blockquote, pre, 
 }
 
 body {
-  font-family: "Roboto", "Noto Sans Math", sans-serif, "Symbola";
+  font-family: "Roboto", sans-serif;
   font-display: swap;
   font-weight: 300;
   line-height: 20px;
   font-size: 14px;
   background-color: #212121;
+  max-width: 1100px;
 }
 
 hgroup {
@@ -24,9 +25,9 @@ hgroup {
   min-height: 210px;
   color: #fff;
   padding: 0 24px;
-  background-color: rgba(197, 0, 123, 0.6);
+  background: rgba(197, 0, 123, 0.6);
 }
-hgroup a {
+hgroup a, div#superclasses + div#subclasses a {
   color: #fff;
 }
 
@@ -51,6 +52,19 @@ hgroup h2 {
   font-size: 16px;
   padding: 8px 0 24px 0;
   font-weight: 300;
+}
+
+nav ul {
+  border-top: 1px solid #375c7d;
+  padding-top: 1em;
+  margin-bottom: 0;
+}
+
+nav ul > li {
+    display: inline-block;
+    padding: 0 1ex 0;
+    font-size: larger;
+    font-weight: 400;
 }
 
 header div#abstract {
@@ -80,7 +94,7 @@ h3 {
   font-size: 11px;
 }
 
-div#directs, div#publications {
+div#directs, div#publications, div#instances, div#maintenance-note {
   padding: 24px;
   background: #fff;
   color: #212121;
@@ -89,12 +103,38 @@ div#directs, div#publications {
   overflow-x: hidden;
 }
 
-div#inverses {
+div#inverses, div#subclasses, div#superclasses {
   padding: 24px;
   background: #d4d4d4;
   color: #212121;
   line-height: 20px;
   font-size: 14px;
+}
+
+div#superclasses + div#subclasses {
+    background: #212121;
+    color: #d4d4d4;
+}
+
+div#maintenance-note {
+    color: #e23006;
+    font-size: larger;
+}
+
+div#maintenance {
+  padding: 24px;
+  color: #e23006;
+  line-height: 20px;
+  font-size: 14px;
+  background: local no-repeat right 1em top 1em/10em url(data:image/svg+xml;base64,PHN2ZyBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1OTUuMjggODQxLjg5IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxNzMuNjkgNzYuMzI4IiB4bWw6c3BhY2U9InByZXNlcnZlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjExLjMxIC0yNDUuNjUpIj4KCTxwYXRoIGQ9Im0zODIuODIgMjQ4LjFjLTAuMjcxLTEuMzUtMS42MjMtMi40NDEtMi45ODItMi40NDFoLTguNzc5YzAuMzkzIDAuNTg0IDAuNjg2IDEuMjMyIDAuODI2IDEuOTI5IDIuOTk4IDE0Ljk3MSAyLjk5OCAzMC4xNDgtMWUtMyA0NS4xMTUtMC4xNDEgMC42OTUtMC40MzMgMS4zNDItMC44MjMgMS45MjZoOC43NzdjMS4zNTkgMCAyLjcxMS0xLjA5IDIuOTgyLTIuNDQxIDIuOTE1LTE0LjU1MiAyLjkxNS0yOS41MzcgMC00NC4wODh6IiBmaWxsPSIjODliYTE3Ii8+CjwvZz4KPHBhdGggZD0ibTE1Ny41OCAyLjQ0MWMtMC4yNzEtMS4zNS0xLjYyNS0yLjQ0MS0yLjk4NC0yLjQ0MWgtOC43NzdjMC4zOTIgMC41ODQgMC42ODYgMS4yMzIgMC44MjYgMS45MjkgMi45OTggMTQuOTY4IDIuOTk4IDMwLjE0Ni0yZS0zIDQ1LjExNy0wLjE0IDAuNjk1LTAuNDMzIDEuMzQyLTAuODI0IDEuOTI0aDguNzc3YzEuMzYgMCAyLjcxMy0xLjA5IDIuOTgzLTIuNDQxIDIuOTE2LTE0LjU1MiAyLjkxNS0yOS41MzcgMWUtMyAtNDQuMDg4eiIgZmlsbD0iI2VjNzQwNCIvPgo8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjExLjMxIC0yNDUuNjUpIj4KCTxwYXRoIGQ9Im0zNTQuOTYgMjQ4LjFjLTAuMjcxLTEuMzUtMS42MjQtMi40NDEtMi45ODUtMi40NDFoLTguNzhjMC4zOTIgMC41ODQgMC42ODYgMS4yMzIgMC44MjcgMS45MjkgMi45OTggMTQuOTY4IDIuOTk4IDMwLjE0Ni0yZS0zIDQ1LjExOS0wLjE0IDAuNjkzLTAuNDM0IDEuMzQtMC44MjQgMS45MjJoOC43NzljMS4zNiAwIDIuNzEzLTEuMDkgMi45ODUtMi40NDEgMi45MTUtMTQuNTUyIDIuOTE1LTI5LjUzNyAwLTQ0LjA4OHoiIGZpbGw9IiNjNTAwN2IiLz4KPC9nPgo8cGF0aCBkPSJtMTQzLjIgNzYuMzI4LTI2Ljc5Ni0yNy4zNTloMTAuMzM0YzEuMzU4IDAgMi43MS0xLjA5IDIuOTgzLTIuNDQxIDIuOTE0LTE0LjU1IDIuOTE0LTI5LjUzNiAwLTQ0LjA4Ni0wLjI3My0xLjM1LTEuNjI1LTIuNDQxLTIuOTgzLTIuNDQxaC0xMjEuNTdjLTEuMzU4IDAtMi43MSAxLjA5Mi0yLjk4MiAyLjQ0MS0yLjkxNSAxNC41NTEtMi45MTQgMjkuNTM2IDAgNDQuMDg2IDAuMjcxIDEuMzU0IDEuNjI1IDIuNDQxIDIuOTgyIDIuNDQxaDg2Ljk2OHoiIGZpbGw9IiM4Nzg4OGEiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIxMS4zMSAtMjQ1LjY1KSI+CgkKCQk8ZyBmaWxsPSIjZmZmIj4KCQkJPHBhdGggZD0ibTI0NC4zNyAyODIuNDQtMS43MDQtNS45M2gtOC41ODlsLTEuNzIxIDUuOTNoLTUuMzM0bDguMDk1LTI1LjAxNmg2LjQ1OGw4LjEyOSAyNS4wMTZ6bS0yLjkzLTEwLjM2Mi0yLjU3MS05LjA4MnMtMC4yNDYtMS4xMzItMC40Ny0yLjA2MmMtMC4xNzMgMC45MzEtMC40NTQgMi4wNjItMC40NTQgMi4wNjJsLTIuNTg5IDkuMDgyeiIvPgoJCQk8cGF0aCBkPSJtMjcyLjIxIDI4Mi40NGgtNS45OThsLTUuNzM4LTEwLjA1NC0wLjM4OSAwLjc1M3Y5LjMwMWgtNS4yODJ2LTI0LjkxNGg1LjI4MnYxMC41MTZsMC45MTItMS41MDMgNS4yODMtOS4wMTNoNS44NjFsLTcuNzUxIDExLjUzM3oiLz4KCQkJPHBhdGggZD0ibTMyMS45IDI4Mi40NGgtNS45OTlzLTMuODM0LTE2LjA4MS0zLjkwMi0xNi40NzktMC4xMjgtMC43NjQtMC4xNzktMS4xYy0wLjA1MS0wLjMzNC0wLjA4OC0wLjYwNC0wLjExLTAuODA5LTAuMDIzIDAuMjA0LTAuMDYgMC40NzUtMC4xMTEgMC44MDktMC4wNTEgMC4zMzYtMC4xMSAwLjY5OS0wLjE3OSAxLjA5MXMtMy44NTIgMTYuNDg3LTMuODUyIDE2LjQ4N2gtNi4wMTZsLTUuOTk4LTI0LjkxNGg1LjE5N3MzLjYwMiAxNy44NjUgMy42ODEgMTguMzE5YzAuMDggMC40NTQgMC4xNTMgMC44NzggMC4yMjIgMS4yN3MwLjExOSAwLjcxMyAwLjE1MyAwLjk2M2MwLjAzNC0wLjI1IDAuMDgzLTAuNTY4IDAuMTQ2LTAuOTU0IDAuMDYyLTAuMzg3IDAuMTI4LTAuNzk5IDAuMTk1LTEuMjM2IDAuMDY4LTAuNDM3IDQuMjYxLTE4LjM2MSA0LjI2MS0xOC4zNjFoNC42MzVzNC4xOTUgMTcuOTI1IDQuMjY5IDE4LjM2MWMwLjA3NCAwLjQzOCAwLjE0MyAwLjg1IDAuMjA1IDEuMjM2czAuMTEgMC43MDQgMC4xNDUgMC45NTRjMC4wMzQtMC4yNSAwLjA4Mi0wLjU3MSAwLjE0Ni0wLjk2MyAwLjA2Mi0wLjM5MiAwLjEzMy0wLjgxNSAwLjIxMy0xLjI3IDAuMDc5LTAuNDU0IDMuNjgxLTE4LjMxOSAzLjY4MS0xOC4zMTloNS4xOTd6Ii8+CgkJPC9nPgoJCgkKCQk8cGF0aCBkPSJtMjgzLjMxIDI4Mi43M2MtNC4yODUtMC4wMTUtNi44My0xLjUyNC02LjgzLTEuNTI0di00LjcxMnMyLjYzMiAxLjk3NCA2LjA4NSAyLjAxN2MyLjEyNCAwLjAyNiAzLjgwNi0wLjY1OSAzLjk3Ni0yLjQyIDAuMjEyLTIuMTk1LTEuMjkzLTMuMTM2LTMuMDgxLTQuMDk3bC0yLjM0OC0xLjI0NGMtMi4xOTgtMS4xNzQtNC4yMTEtMy4yMDctNC4yMTEtNi43MjkgMC01LjQ0MSA0LjY5NS02LjkgOC4xMjMtNi45IDMuNjUyIDAgNi41MzggMS43MzcgNi41MzggMS43MzdsLTEuNjU1IDMuODIzcy0yLjE1Ni0xLjM5OC00LjY1Mi0xLjM5OGMtMS44NjMgMC0zLjM1NCAwLjY0LTMuMzU0IDIuNjMyIDAgMS43NDMgMS4zMzUgMi41ODcgMi44NjIgMy40MDVsMi4yMzYgMS4xNzRjMi4zODUgMS4yNDQgNC43MzMgMy4wNjIgNC43MzMgNi45NDUgMWUtMyA1LjQzLTQuNjk1IDcuMzA0LTguNDIyIDcuMjkxeiIgZmlsbD0iI2ZmZiIvPgoJCjwvZz4KPC9zdmc+Cg==), #efefef;
+}
+
+div#maintenance h3 {
+    font-size: xx-large;
+}
+
+div#maintenance .td2 {
+    font-size: large;
 }
 
 div#abstract a {
@@ -133,25 +173,28 @@ a {
   min-width: 15em;
 }
 
+td.td2 {
+    min-width: 100%;
+}
+
 td .c2 {
   padding-top: 0.5em;
   padding-bottom: 0.5em;
-  min-width: 70vw;
   display: inline-block;
 }
 
 div#directs tr td.td2 {
- border-bottom: 1px solid #dbdbdb;
+ border-bottom: 0px solid #dbdbdb;
 }
 
 div#inverses tr td.td2 {
- border-bottom: 1px solid #b6b6b6;
+ border-bottom: 0px solid #b6b6b6;
 }
 
-div#directs tr td span.c2:not(:last-child) {
+div#directs tr td span.c2 {
   background:
     url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAABCAYAAADXeS5fAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFOUFBM0VFRjI2MzIxMUU0ODlBQ0JGRDRDQzEzOTQzRSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFOUFBM0VGMDI2MzIxMUU0ODlBQ0JGRDRDQzEzOTQzRSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjYzQ0FFQ0Q0MjYzMTExRTQ4OUFDQkZENENDMTM5NDNFIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkU5QUEzRUVFMjYzMjExRTQ4OUFDQkZENENDMTM5NDNFIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+0iwesAAAABtJREFUeNpi3L59+38GBgZGICaZ9vDwYAQIMACSFAr/M4NKAgAAAABJRU5ErkJggg==)
-    no-repeat
+    repeat-x
     bottom left;
 }
 
@@ -200,7 +243,7 @@ footer > div {
 }
 
 #footer-right {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 24px;
 }
 
@@ -230,6 +273,7 @@ footer > div {
 div.datatype {
  color: #9e9e9e;
  float: right;
+ padding-left: 1em;
 }
 
 div#directs a.localinfo, div#inverses a.localinfo {
@@ -304,14 +348,13 @@ div#inverses .td1 a.localinfo {
 }
 
 @media (max-width: 950px) {
+    td.td2 {
+	min-width: 100%;
+    }
+
     .td1 {
         width: 10em;
         min-width: 10em;
-    }
-
-    td .c2 {
-        width: 100%;
-        min-width: 100%;
     }
 
     #publications ol {
@@ -336,7 +379,6 @@ div#inverses .td1 a.localinfo {
 
     td {
         display: block;
-        display: grid;
     }
 
     .td1 .td2 {

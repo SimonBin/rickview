@@ -2,13 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>{title}</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    {{ if redirect }}
+    <meta http-equiv="refresh" content="0;URL='{redirect|uri_to_local}'" />
+    {{ endif }}
+    <title>{title} - AKSW</title>
+    <script type="application/ld+json">
+      {jsonld | unescaped}
+    </script>
     <link rel="stylesheet" href="/rickview.css" type="text/css" />
     <link rel="preconnect" href="https://fonts.gstatic.com" />
     <link href="//fonts.googleapis.com/css?family=Roboto:100,300,500&amp;subset=latin-ext,latin,greek-ext,greek,cyrillic-ext,vietnamese,cyrillic&amp;display=swap" rel="stylesheet" type="text/css" />
-    <link href="//fonts.googleapis.com/css?family=Noto+Sans+Math:400&amp;text=%E2%A4%AF%E2%A4%AE%E2%A4%B0%E2%86%AA" rel="stylesheet" type="text/css" />
-    <link href="//fontlibrary.org/face/symbola" rel="stylesheet" type="text/css" />
     {{ if bibtag }}
     <script>
       function exhibitAddId() \{
@@ -18,10 +22,33 @@
       }
     </script>
     <script onload="exhibitAddId()" src="https://api.simile-widgets.org/exhibit/3.1.1/exhibit-api.js" type="text/javascript" async></script>
-    <link href="https://www.bibsonomy.org/json/user/aksw/{bibtag}?items=1000&callback=cb" type="application/jsonp" rel="exhibit/data" ex:jsonp-callback="cb" async />
+    <link href="https://www.bibsonomy.org/json/user/{bibtag}?items=1000&callback=cb" type="application/jsonp" rel="exhibit/data" ex:jsonp-callback="cb" async />
     {{ endif }}
   </head>
   <body>
+    <div id="maintenance">
+      <table data-nosnippet>
+        <tr>
+          <td class="td1">
+            <label class="c1"><h3>Maintenance</h3></label>
+          </td>
+          <td class="td2"><p style="margin-right: 7em">OntoWiki is currently unavailable.</p><ul>
+	      <li><a href="//rv.aksw.org{uri|uri_to_local}">Look up more properties of this term (&nbsp;{ suffix }&nbsp;) on RickView.</a></li>
+	      <li><a href="https://github.com/AKSW/aksw.org.jekyllrdf">Help out with the new Jekyll-RDF based AKSW webpage.</a></li>
+	  </ul></td>
+        </tr>
+      </table>
+      <nav><ul>
+	  <li><a href="/About">About</a></li>
+	  <li><a href="/Team">Team</a></li>
+	  <li><a href="/Groups">Groups</a></li>
+	  <li><a href="/Projects">Projects</a></li>
+	  <li><a href="/Publications">Publications</a></li>
+	  <li><a href="/Events">Events</a></li>
+	  <li><a href="//blog.aksw.org">Blog</a></li>
+	  <li><a href="/Partners">Partners</a></li>
+      </ul></nav>
+    </div>
     <article>
       <header>
         <hgroup>
@@ -48,12 +75,66 @@
               <td class="td1">
                 <label class="c1">{ entry.0 | unescaped }</label>
               </td>
-              <td>{{ for value in entry.1 }} {{ if not @first }}<br />{{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
+              <td class="td2">{{ for value in entry.1 }} {{ if not @first }}<br />{{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
             </tr>
             {{ endfor }}
           </table>
         </div>
         <aside class="empty"></aside>
+        <div id="maintenance-note" data-nosnippet>
+          <table>
+            <tr>
+              <td class="td1">
+                <label class="c1"><strong>Note:</strong></label>
+              </td>
+              <td class="td2"><blockquote>Our old website is currently off-line while we are trying recreate it with more modern tech.</blockquote></td>
+            </tr>
+          </table>
+        </div>
+      </header>
+	{{ if superclasses }}
+        <div id="superclasses">
+          <table>
+            {{ for entry in superclasses }}
+            <tr>
+              <td class="td1">
+                <label class="c1">has super-classes</label>
+              </td>
+              <td class="td2">{{ for value in entry.1 }}{{ if not @first }}<br />{{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
+            </tr>
+            {{ endfor }}
+          </table>
+        </div>
+	{{ endif }}
+	{{ if subclasses }}
+        <div id="subclasses">
+          <table>
+            {{ for entry in subclasses }}
+            <tr>
+              <td class="td1">
+                <label class="c1">has sub-classes</label>
+              </td>
+              <td class="td2">{{ for value in entry.1 }}{{ if not @first }}<br />{{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
+            </tr>
+            {{ endfor }}
+          </table>
+        </div>
+	{{ endif }}
+	{{ if instances }}
+        <div id="instances">
+          <table>
+            {{ for entry in instances }}
+            <tr>
+              <td class="td1">
+                <label class="c1">is { entry.0 | unescaped } of</label>
+              </td>
+              <td class="td2">{{ for value in entry.1 }}{{ if not @first }}<br />{{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
+            </tr>
+            {{ endfor }}
+          </table>
+        </div>
+	{{ endif }}
+	{{ if directs }}
         <div id="directs">
           <table>
             {{ for entry in directs }}
@@ -61,13 +142,14 @@
               <td class="td1">
                 <label class="c1">{ entry.0 | unescaped }</label>
               </td>
-              <td class="td2">{{ for value in entry.1 }} {{ if not @first }}<br />{{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
+              <td class="td2">{{ for value in entry.1 }}{{ if not @first }}; {{ endif }}<span class="c2">{ value | unescaped }</span>{{ endfor }}</td>
             </tr>
             {{ endfor }}
           </table>
         </div>
-      </header>
+	{{ endif }}
       <aside class="empty"></aside>
+      {{ if inverses }}
       <div id="inverses">
         <h3>inverse relations</h3>
         <table>
@@ -81,6 +163,7 @@
           {{ endfor }}
         </table>
       </div>
+      {{ endif }}
       {{ if bibtag }}
       <aside class="empty"></aside>
       <div id="publications">
@@ -109,17 +192,14 @@
         <a href="https://github.com/konradhoeffner/rickview" class="uppercase" target="_blank" title="based on RickView">publish Linked Data with RickView</a>
       </div>
       <div class="footer-edit">
-        {{ if edit_url }}
-        <a href="{edit_url}" rel="nofollow"><span>&#128393;</span> edit in corporate memory</a>
-        {{ endif }}
+	Agile Knowledge Engineering and Semantic Web (AKSW)
       </div>
       <div id="footer-right">
         <ul>
-          {{ if github_issue_url }}
-          <li>
-            <a target="_blank" href="{github_issue_url}">create issue on GitHub</a>
-          </li>
-          {{ endif }}
+	  <li>          See also:</li>
+
+	    <li><a href="https://github.com/AKSW/">AKSW on GitHub</a></li>
+	    <li><a href="https://github.com/AKSW/aksw.org-model">Website model</a></li>
         </ul>
       </div>
     </footer>

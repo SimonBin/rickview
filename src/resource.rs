@@ -9,6 +9,7 @@ pub struct Property {
 /// Summary of an RDF resource.
 #[derive(Serialize)]
 pub struct Resource {
+    pub jsonld: Option<String>,
     pub uri: String,
     pub suffix: String,
     pub title: String,
@@ -20,9 +21,13 @@ pub struct Resource {
     pub directs: Vec<(String, Vec<String>)>,
     /// HTML representations of subjects and properties of triples where this resource is an object.
     pub inverses: Vec<(String, Vec<String>)>,
+    pub superclasses: Vec<(String, Vec<String>)>,
+    pub subclasses: Vec<(String, Vec<String>)>,
+    pub instances: Vec<(String, Vec<String>)>,
     pub duration: String,
     pub github_issue_url: Option<String>,
     pub depiction: Option<String>,
     pub bibtag: Option<String>,
+    pub redirect: Option<String>,
     pub edit_url: Option<String>,
 }
