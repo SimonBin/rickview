@@ -130,7 +130,13 @@ a {
 }
 
 .td1 {
-  min-width: 15em;
+    min-width: 15em;
+    text-align: right;
+    padding-right: 2em;
+}
+
+.td1 a.localinfo {
+  margin-right: -1em;
 }
 
 td.td2, td .c2 {
@@ -345,6 +351,11 @@ div#inverses .td1 a.localinfo {
 
     .td1 .td2 {
         margin-left: -1em;
+    }
+
+    .td1 {
+	text-align: left;
+	padding-right: 0;
     }
 
     .td2 {
