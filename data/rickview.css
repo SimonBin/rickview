@@ -133,10 +133,14 @@ a {
   min-width: 15em;
 }
 
+td.td2, td .c2 {
+    max-width: 800px;
+}
+
 td .c2 {
   padding-top: 0.5em;
   padding-bottom: 0.5em;
-  min-width: 70vw;
+  min-width: min(70vw, 800px);
   display: inline-block;
 }
 
