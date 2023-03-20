@@ -2,6 +2,7 @@ prefix = "ex"
 namespace = "http://example.com/resource/"
 title_properties =  ["http://purl.org/dc/elements/1.1/title", "http://purl.org/dc/terms/title", "http://www.w3.org/2000/01/rdf-schema#label"]
 type_properties = ["http://www.w3.org/1999/02/22-rdf-syntax-ns#type"]
+show_properties = []
 description_properties = [ "http://www.w3.org/2004/02/skos/core#definition", "http://www.w3.org/2000/01/rdf-schema#comment"]
 examples = ["ExClass", "exProperty", "ExInstance"]
 homepage = "https://github.com/konradhoeffner/rickview"
